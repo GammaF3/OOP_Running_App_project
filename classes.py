@@ -7,7 +7,7 @@ class Account:
     #   Used in outside functions that create and delete accounts
     #   Uses a list of Run objects as attributes
     #   phone number used in outside functions?
-    #   weight_lbs: used to calculate calories
+    #   weight_kg, height_cm, age, isMale: used to calculate calories via bmr
     #   formula to calculate calories found here: https://www.medicinenet.com/how_to_calculate_calories_burned_during_exercise/article.htm
     #   calories burned in a run = Run duration [minutes] * (MET value of run [determined by speed] * BMR * weight_kg) / 200
     #   BMR [basal metabolic rate]:
@@ -70,6 +70,30 @@ class Account:
     def get_last_name(self):
         return self.last_name
 
+    def get_isMale(self):
+        return self.isMale
+
+    def get_weight_kg(self):
+        return self.weight_kg
+
+    def get_weight_lbs(self):
+        return self.weight_kg * 2.20462262
+
+    def get_height_cm(self):
+        return self.height_cm
+
+    def get_height_inch(self):
+        return self.height_cm * 0.393701
+
+    def get_age(self):
+        return self.age
+
+    def get_total_dist_mi(self):
+        return self.total_dist_mi
+
+    def get_total_calories_burned(self):
+        return self.total_calories_burned
+
     def set_username(self, string):
         self.username = string
 
@@ -117,8 +141,8 @@ class Run:
     def get_coordinates(self, i):
         return self.coordinates_list[i]
 
-    def set_coordinates_list(self, list_tuple_string):
-        self.coordinates_list = list_tuple_string
+    def set_coordinates_list(self, listof_tupleof_string):
+        self.coordinates_list = listof_tupleof_string
 
     def append_coordinates(self, __tuple):
         self.coordinates_list.append(__tuple)
@@ -126,9 +150,9 @@ class Run:
     def calculate_miles(self):
         # Use distance equation to calculate mileage between each sample: a to b, b to c, etc., then add them all up
         # will need to see how the lat and lng data will be formatted, then use that formatting
-        # because earth is an elipsoid distance between degrees of longitude is shorter when closer to poles,
-        # longer when close to equator
-        # Longitude: 1 deg = 111.320*cos(latitude) km
+        # because distance between degrees of longitude is shorter when closer to poles and
+        # longer when close to the equator, needs trig
+        # Longitude: 1 deg = 111.320*cos(latitude) km, or the coefficient for miles is 69.1712130439
         total_dist_mi = 0
         for i in range(1, len(self.coordinates_list)):
             first_lat_float = float(
@@ -143,6 +167,9 @@ class Run:
             second_lng_float = float(
                 self.coordinates_list[i][1]['''slice string for compatible casting here''']
             )
+            average_longitude_degrees = (first_lng_float + second_lng_float) / 2
+
+            # in miles_between_samples, math.cos() uses radians, so need to convert degrees of latitude to radians.
             miles_between_samples = math.sqrt(69 * ((second_lat_float - first_lat_float) ** 2) +
-                                              (second_lng_float - first_lng_float) ** 2)
+                                              ((69.1712130439 * math.cos(math.radians(average_longitude_degrees))) * (second_lng_float - first_lng_float) ** 2))
             total_dist_mi += miles_between_samples
