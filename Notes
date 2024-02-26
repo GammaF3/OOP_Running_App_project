@@ -1,0 +1,25 @@
+This is the dictionary itself, containing key-value pairs. Each key is followed by a colon : and its corresponding value. Here's what each key represents:
+_type: Represents the type of location.
+BSSID: Represents the BSSID (Basic Service Set Identifier) of the wireless network.
+SSID: Represents the SSID (Service Set Identifier) of the wireless network.
+acc: Represents the accuracy of the location.
+alt: Represents the altitude.
+batt: Represents the battery level.
+bs: Represents something related to the battery (possibly battery status).
+conn: Represents the connection type (possibly 'w' for wireless).
+created_at: Represents the timestamp when the data was created.
+lat: Represents the latitude.
+lon: Represents the longitude.
+m: Represents a value related to 'm' (possibly mode or something similar).
+t: Represents a type or category (possibly 'u' for unknown).
+tid: Represents an ID (possibly related to the data).
+topic: Represents the topic or source of the data.
+tst: Represents the timestamp when the data was received.
+vac: Represents a value related to 'vac' (possibly 'v' for vertical).
+vel: Represents the velocity.
+
+to do list;
+How to use a different class inside of a different another python file
+adjust time to intervals of 10 to 20 sec
+create a file to store data
+Adjust class 1 to work with the data list being sent from the user
