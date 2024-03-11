@@ -1,6 +1,80 @@
 import math
 
 
+class Run:
+    #
+    #   class Run: stores data about runs a user makes
+    #   self.data_list: In order to accurately track data, we need to sample the coordinates from the runner
+    #   multiple times during their run. data_list is the list of data samples in the form of dictionaries
+    #   throughout a runner's run. Each sample returns a dictionary.
+    #   sample_interval: time between the data points are taken. I left it as a variable in case we want
+    #   to change it later (could vary between 3 and 30 seconds. The app says cell phone battery is
+    #   severely effected by extended use, so we will want to take that into account).
+    #   TODO: detect when exiting a run, then modify total_run_duration_sec() to include the time between last created
+    #       sample and the time after that sample until the run was stopped. Or, find a way to add total time for a run.
+    #       For now, we can just use durations that are multiples of the sample_interval.
+    #
+
+    def __init__(self, data_list: list[dict], sample_interval):
+        self.data_list = data_list
+        self.coordinates_list = self.get_coordinates_list()
+        self.sample_interval = sample_interval
+
+    def get_coordinates_list(self):  # not sure why there's a warn here
+        coordinates_list = []
+        for data in self.data_list:
+            coordinates_list.append(list(data['latitude_kw'], data['longitude_kw']))  # create a list of 2-element lists with latitude and longitude floats, [[a.a, b.b], [c.c, d.d],...]
+        return coordinates_list
+
+    def calculate_run_duration_sec(self):
+        duration = len(self.data_list) * self.sample_interval
+        # duration += time between last sample and stop time
+        return duration
+
+    def calculate_miles_between_samples(self):
+        # Use distance equation to calculate mileage between each sample: a to b, b to c, etc.
+        # Returns a list of miles between samples so that we can call this function to calculate MET
+        # will need to see how the lat and lng data will be formatted, then use that formatting
+        # because distance between degrees of longitude is shorter when closer to poles and
+        # longer when close to the equator, needs trig
+        # Longitude: 1 deg = 111.320*cos(latitude) km, or the coefficient for miles is 69.1712130439
+        miles_between_samples = []
+        for i in range(1, len(self.coordinates_list)):
+            first_lat_float = (
+                float(self.coordinates_list[i - 1][0])
+            )
+            second_lat_float = (
+                float(self.coordinates_list[i][0])
+            )
+            first_lng_float = (
+                float(self.coordinates_list[i - 1][1])
+            )
+            second_lng_float = (
+                float(self.coordinates_list[i][1])
+            )
+            average_latitude_degrees = (first_lat_float + second_lat_float) / 2
+
+            # in miles_between_samples, math.cos() uses radians, so need to convert degrees of latitude to radians.
+            miles_between_two_samples = math.sqrt(69 * ((second_lat_float - first_lat_float) ** 2) +
+                                              ((69.1712130439 * math.cos(math.radians(average_latitude_degrees))) * (second_lng_float - first_lng_float) ** 2))
+            miles_between_samples.append(miles_between_two_samples)
+        return miles_between_samples
+
+    def calculate_mph_between_samples(self):
+        speeds_between_samples = []
+        distances_mi = self.calculate_miles_between_samples()
+        for distance in distances_mi:
+            speeds_between_samples.append((distance / self.sample_interval) * (36000 / self.sample_interval))  # 36000 converts miles per second to miles per hour
+        return speeds_between_samples
+
+    def average_speed_mph(self):  # throughout entire run
+        list_of_mph = self.calculate_mph_between_samples()
+        return sum(list_of_mph) / len(list_of_mph)
+
+    def get_sample_interval(self):
+        return self.sample_interval
+
+
 class Account:
     #
     #   class Account: manipulates and outputs data from a specific runner's account
@@ -14,6 +88,8 @@ class Account:
     #   Men: BMR = 88.362 + (13.397 x weight in kg) + (4.799 x height in cm) – (5.677 x age in years)
     #   Women: BMR = 447.593 + (9.247 x weight in kg) + (3.098 x height in cm) – (4.330 x age in years)
     #   formula for bmr here: https://www.garnethealth.org/news/basal-metabolic-rate-calculator#:~:text=Your%20basal%20metabolism%20rate%20is,4.330%20x%20age%20in%20years)
+    #   To calculate MET function, I took samples from this website https://exrx.net/Calculators/WalkRunMETs
+    #   and graphed them on Desmos, created lines of best fit, then created the MET function.
     #
 
     def __init__(self, username, password, all_runs, phone_number, first_name, last_name, isMale, weight_kg, height_cm,
@@ -118,58 +194,19 @@ class Account:
     def set_last_name(self, string):
         self.last_name = string
 
-
-class Run:
-    #
-    #   class Run: stores data about runs a user makes
-    #   Uses phone_number from Account
-    #   self.coordinates_list: In order to accurately track data, we need to sample the coordinates from the runner
-    #   multiple times during their run. coordinates_list is a list of two-element tuples which each contain a latitude
-    #   and longitude string respectively.
-    #
-    #   Because it uses strings, coordinate_list is a 3D array:
-    #   self.coordinates_list[sample][0 for lat, 1 for lng][str]
-    #
-    def __init__(self, coordinates_list, distance_mi, duration_sec):
-        self.coordinates_list = list(coordinates_list)
-        self.dist_mi = distance_mi
-        self.duration_sec = duration_sec
-
-    def get_coordinates_list(self):
-        return self.coordinates_list
-
-    def get_coordinates(self, i):
-        return self.coordinates_list[i]
-
-    def set_coordinates_list(self, listof_tupleof_string):
-        self.coordinates_list = listof_tupleof_string
-
-    def append_coordinates(self, __tuple):
-        self.coordinates_list.append(__tuple)
-
-    def calculate_miles(self):
-        # Use distance equation to calculate mileage between each sample: a to b, b to c, etc., then add them all up
-        # will need to see how the lat and lng data will be formatted, then use that formatting
-        # because distance between degrees of longitude is shorter when closer to poles and
-        # longer when close to the equator, needs trig
-        # Longitude: 1 deg = 111.320*cos(latitude) km, or the coefficient for miles is 69.1712130439
-        total_dist_mi = 0
-        for i in range(1, len(self.coordinates_list)):
-            first_lat_float = float(
-                self.coordinates_list[i - 1][0]['''slice string for compatible casting here''']
-            )
-            second_lat_float = float(
-                self.coordinates_list[i][0]['''slice string for compatible casting here''']
-            )
-            first_lng_float = float(
-                self.coordinates_list[i - 1][1]['''slice string for compatible casting here''']
-            )
-            second_lng_float = float(
-                self.coordinates_list[i][1]['''slice string for compatible casting here''']
-            )
-            average_longitude_degrees = (first_lng_float + second_lng_float) / 2
-
-            # in miles_between_samples, math.cos() uses radians, so need to convert degrees of latitude to radians.
-            miles_between_samples = math.sqrt(69 * ((second_lat_float - first_lat_float) ** 2) +
-                                              ((69.1712130439 * math.cos(math.radians(average_longitude_degrees))) * (second_lng_float - first_lng_float) ** 2))
-            total_dist_mi += miles_between_samples
+    def calculate_calories_burned(self, run: Run):
+        # Functions obtained using lines of best fit in Desmos.
+        # Change in functions is caused by a natural change in gait from walking to running.
+        # #   calories burned in a run =
+        # Run duration [minutes] * (MET value of run [determined by speed] * BMR * weight_kg) / 200
+        list_of_METs = []
+        list_of_mph = run.calculate_mph_between_samples()
+        for speed in list_of_mph:
+            if speed < 4.5:
+                list_of_METs.append(1.47022**speed + -0.173639*speed + 0.423387)
+            else:
+                list_of_METs.append(1.53223*speed + 0.992667)
+        calories_burned = 0
+        for met in list_of_METs:
+            calories_burned += run.get_sample_interval() * (met * self.bmr * self.get_weight_kg()) / 200
+        return calories_burned
