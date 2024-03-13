@@ -23,3 +23,33 @@ How to use a different class inside of a different another python file
 adjust time to intervals of 10 to 20 sec
 create a file to store data
 Adjust class 1 to work with the data list being sent from the user
+
+
+
+
+Running Application
+Partner: Fernando Gomez / Henry Zedler
+Modules
+1.	Account management - create or delete an account you have
+2.	Create and delete accounts
+3.	Record run - input new data from a run
+4.	Enter new data from a run, or use a device to record a run
+5.	View progress - view previous input data and output measurements based on input data
+6.	previous runs
+7.	calories burned
+8.	miles run
+9.	time spent running
+10.	pace
+
+
+11.	consistency in running
+12.	days run in a row
+13.	runs per week
+14.	total number of runs
+15.	average time/distance of runs
+16.	Goals - goals users can set for themselves
+17.	set goals
+18.	races
+19.	number of miles/week
+20.	farthest run
+21.	notify user of goals when they are met
