@@ -1,0 +1,92 @@
+def add_string_to_file(string, filename="Users.txt"):
+    """
+    Add a string to a text file.
+    """
+    with open(filename, "a") as file:
+        file.write(string + "\n")
+
+def print_users_from_file(filename="Users.txt"):
+    """
+    Print all strings from a text file.
+    """
+    try:
+
+        with open(filename, "r") as file:
+            for line in file:
+                print(line.strip())  # Remove trailing newline character
+    except FileNotFoundError:
+        print("No users found.")
+
+def delete_user_from_file(name, filename="Users.txt"):
+    """
+    Delete a user from a text file based on its name.
+    """
+    try:
+        with open(filename, "r") as file:
+            lines = file.readlines()
+        with open(filename, "w") as file:
+            for line in lines:
+                if name not in line:
+                    file.write(line)
+        print(f"User '{name}' deleted successfully!")
+    except FileNotFoundError:
+        print("No users found.")
+
+def print_times_from_file(filename="Entry_times.txt"):
+    """
+    Print all times from a text file.
+    """
+    try:
+        with open(filename, "r") as file:
+            for line in file:
+                print(line.strip())  # Remove trailing newline character
+    except FileNotFoundError:
+        print("No entry times found.")
+
+def print_locations_from_file(filename="Coordinates.txt"):
+    """
+    Print all locations from a text file.
+    """
+    try:
+        with open(filename, "r") as file:
+            for line in file:
+                print(line.strip())  # Remove trailing newline character
+    except FileNotFoundError:
+        print("No locations found.")
+
+def main():
+    while True:
+        print("\nMenu:")
+        print("1. Add a user")
+        print("2. Print all users")
+        print("3. Delete a user")
+        print("4. Print all entry times")
+        print("5. Print all locations")
+        print("6. Exit")
+
+        choice = input("Enter your choice: ")
+
+        if choice == "1":
+            name = input("Enter the user's name: ")
+            add_string_to_file(name)
+            print("User added successfully!")
+        elif choice == "2":
+            print("Users from Users.txt:")
+            print_users_from_file()
+        elif choice == "3":
+            name = input("Enter the user's name to delete: ")
+            delete_user_from_file(name)
+        elif choice == "4":
+            print("Entry times from Entry_times.txt:")
+            print_times_from_file()
+        elif choice == "5":
+            print("Locations from Coordinates.txt:")
+            print_locations_from_file()
+        elif choice == "6":
+            print("Exiting program.")
+            break
+        else:
+            print("Invalid choice. Please enter a number between 1 and 6.")
+
+if __name__ == "__main__":
+    main()
