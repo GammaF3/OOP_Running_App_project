@@ -1,7 +1,6 @@
 from flask import Flask, request
 import datetime
 
-
 def main():
     # Instance of the Flask application
     RUN = Flask(__name__)
@@ -17,7 +16,6 @@ def main():
                 print(type(data))
                 print(data.get('lat'))
                 print(data.get('lon'))
-
                 # Save latitude and longitude to Coordinates.txt
                 with open("Coordinates.txt", "a") as file:
                     file.write(f"Latitude: {data.get('lat')}, Longitude: {data.get('lon')}\n")
