@@ -45,7 +45,7 @@ def vincenty_formula(lat1, lon1, lat2, lon2):
 
 
 class Goal:
-    def __init__(self, description, goal_value, current_value=0):
+    def __init__(self, description='Total <goal type>', goal_value=0, current_value=0):
         self.description = description
         self.goal_value = goal_value
         self.current_value = current_value
@@ -67,23 +67,23 @@ class Goal:
 
 
 class CalorieGoal(Goal):
-    def __init__(self, goal_value_cal):
-        super().__init__('Total calories burned', goal_value_cal)
+    def __init__(self, goal_value_cal=0):
+        super().__init__('Total calories burned (Cal)', goal_value_cal)
 
 
 class KilometersGoal(Goal):
-    def __init__(self, goal_value_km):
+    def __init__(self, goal_value_km=0):
         super().__init__('Total kilometers run', goal_value_km)
 
 
 class MilesGoal(Goal):
-    def __init__(self, goal_value_mi):
+    def __init__(self, goal_value_mi=0):
         super().__init__('Total miles run', goal_value_mi)
 
 
 class TimeGoal(Goal):
-    def __init__(self, goal_value_sec):
-        super().__init__('Total running time', goal_value_sec)
+    def __init__(self, goal_value=0):
+        super().__init__('Total running time', goal_value)
         self.current_value = {
             'days': 0,
             'hours': 0,
@@ -96,8 +96,8 @@ class TimeGoal(Goal):
             'minutes': 0,
             'seconds': 0
         }
-        goal_value_sec = self.get_goal_value()
-        if self.get_goal_value() >= 86400:
+        goal_value_sec = goal_value
+        if goal_value_sec >= 86400:
             self.goal_value['days'] = goal_value_sec // 86400
             goal_value_sec = self.get_goal_value() % 86400
         if goal_value_sec >= 3600:
@@ -143,22 +143,22 @@ class Run:
     #       For now, we can just use durations that are multiples of the sample_interval.
     #
 
-    def __init__(self, coordinates_list: list[tuple[int]], sample_interval: int):
-        self.coordinates_list = coordinates_list
+    def __init__(self, coordinates_list: list[tuple[int, int]] = None, date_time: str = 'mm/dd/yyyy hh:mm:ss', seconds_elapsed: int = 4212, sample_interval=20):
+        if coordinates_list is None:
+            coordinates_list = [(0, 0)]
+            self.distance_mi = 10
+        else:
+            self.distance_mi = sum(self.calculate_miles_between_samples())
+        self.coordinates_list = coordinates_list[:]
+        self.date_time = date_time
+        self.seconds_elapsed = seconds_elapsed
         self.sample_interval = sample_interval
-        self.distance_mi = sum(self.calculate_miles_between_samples())
-        
 
     def get_coordinates_list(self):
         return self.coordinates_list
 
     def add_coordinates(self, data: dict):
         self.coordinates_list.append((data['lat'], data['lon']))
-
-    def calculate_run_duration_sec(self):
-        duration = len(self.coordinates_list) * self.sample_interval
-        # duration += time between last sample and stop time
-        return duration
 
     def calculate_miles_between_samples(self):  # returns a list of the distances between each sample; a to b, b to c, etc
         to_return = []
@@ -168,10 +168,12 @@ class Run:
 
     def calculate_mph_between_samples(self):  # needed in addition to average_speed_mph to calculate calories burned
         speeds_between_samples = []
-        distances_mi = self.calculate_miles_between_samples()
+        if len(self.coordinates_list) <= 1:  # for default constructor
+            distances_mi = [.0831212 for x in range(240)]  # comes out at about 8 min/mi
+        else:
+            distances_mi = self.calculate_miles_between_samples()
         for distance in distances_mi:
-            speeds_between_samples.append((distance / self.sample_interval) * (
-                    36000 / self.sample_interval))  # 36000 converts miles per second to miles per hour
+            speeds_between_samples.append((distance / self.sample_interval) * (36000 / self.sample_interval))  # 36000 converts miles per second to miles per hour
         return speeds_between_samples
 
     def average_speed_mph(self):  # throughout entire run
@@ -184,6 +186,37 @@ class Run:
     def get_sample_interval(self):
         return self.sample_interval
 
+    def get_date_time(self):
+        return self.date_time
+
+    def get_distance_mi(self):
+        return self.distance_mi
+
+    def get_seconds_elapsed(self):
+        return self.seconds_elapsed
+
+    def str_time_elapsed(self):
+        seconds = self.seconds_elapsed
+        to_return = ''
+        unit_dict = {
+            'years': 31536000,
+            'months': 2628003,
+            'weeks': 604800,
+            'days': 86400,
+            'hours': 3600,
+            'minutes': 60,
+            'seconds': 1
+        }
+        for unit in unit_dict:
+            if seconds >= unit_dict[unit]:
+                to_return += f'{seconds // unit_dict[unit]} {unit}'
+                seconds = seconds % unit_dict[unit]
+                if seconds != 0:
+                    to_return += ', '
+                else:
+                    break
+        return to_return
+
 
 class Account:
     #
@@ -193,6 +226,7 @@ class Account:
     #   phone number used in outside functions?
     #   weight_kg, height_cm, age, isMale: used to calculate calories via bmr
     #   formula to calculate calories found here: https://www.medicinenet.com/how_to_calculate_calories_burned_during_exercise/article.htm
+    #   'Total calories burned in 1 second = (3.5 times the metabolic equivalent or MET multiplied by your body weight in kilograms)/12000.'
     #   calories burned in a run = Run duration [minutes] * (MET value of run [determined by speed] * BMR * weight_kg) / 200
     #   BMR [basal metabolic rate]:
     #   Men: BMR = 88.362 + (13.397 x weight in kg) + (4.799 x height in cm) – (5.677 x age in years)
@@ -203,42 +237,38 @@ class Account:
     #
     #
 
-    def __init__(self, username, password, all_runs, phone_number, first_name, last_name, isMale, weight_kg, height_cm,
-                 age, total_dist_mi, total_calories_burned, number_runs_completed, total_time_running_sec):
+    def __init__(self, username='username', password='12345', all_runs: list[Run] = None, all_goals: list[Goal] = None,
+                 phone_number='0000000000', first_name='firstname', last_name='lastname', isMale=True, weight_kg=75, height_cm=180,
+                 age=18, calorie_goals_completed=0, distance_goals_completed=0, time_goals_completed=0):
+        if all_runs is None:
+            all_runs = [Run(), Run(), Run(), Run(), Run(), Run(), Run(), Run(), Run(), Run(), Run(), Run()]
+        if all_goals is None:
+            all_goals = [CalorieGoal(), TimeGoal(), MilesGoal(), KilometersGoal()]
         self.username = username
         self.password = password
         self.all_runs = list(all_runs)  # List of type Run
+        self.all_goals = list(all_goals)
         self.phone_number = phone_number  # Phone number of account holder,
         # required to track location to determine mileage
         self.first_name = first_name  # The first name of the account holder, displayed on front end
         self.last_name = last_name  # The last name of the account holder, displayed on front end
         self.isMale = isMale
+        if isMale:
+            bmr = 88.362 + (13.397 * weight_kg) + (4.799 * height_cm) - (5.677 * age)
+        else:
+            bmr = 447.593 + (9.247 * weight_kg) + (3.098 * height_cm) - (4.330 * age)
+        self.bmr = bmr
         self.weight_kg = weight_kg
         self.height_cm = height_cm
         self.age = age
-        self.number_runs_completed = number_runs_completed
-        self.total_dist_mi = total_dist_mi
-        self.total_calories_burned = total_calories_burned
-        self.total_time_running_sec = total_time_running_sec
-
-        if isMale:
-            self.bmr = 88.362 + (13.397 * self.weight_kg) + (4.799 * self.height_cm) - (5.677 * age)
-        else:
-            self.bmr = 447.593 + (9.247 * weight_kg) + (3.098 * height_cm) - (4.330 * age)
-
-    @staticmethod
-    def null_account():
-        null = Account('', '', [], '', '', '', False, 0.0, 0.0, 0, 0.0, 0, 0, 0)
-        return null
-
-    @staticmethod
-    def new_account(username, password, phone_number, first_name, last_name, isMale, weight_kg, height_cm,
-                    age):  # used when making new account
-        new = Account(username=username, password=password, all_runs=list(), phone_number=phone_number,
-                      first_name=first_name, last_name=last_name, isMale=isMale, weight_kg=weight_kg,
-                      height_cm=height_cm, age=age, total_dist_mi=0.0, total_calories_burned=0.0,
-                      number_runs_completed=0, total_time_running_sec=0)
-        return new
+        self.runs_completed = len(all_runs)
+        self.goals_completed = calorie_goals_completed + time_goals_completed + distance_goals_completed
+        self.calorie_goals_completed = calorie_goals_completed
+        self.time_goals_completed = time_goals_completed
+        self.distance_goals_completed = distance_goals_completed
+        self.total_dist_mi = sum([run.get_distance_mi() for run in all_runs])
+        self.total_calories_burned = sum([self.calculate_calories_burned(run) for run in all_runs])
+        self.total_time_running_sec = sum([run.get_seconds_elapsed() for run in all_runs])
 
     def get_username(self):
         return self.username
@@ -251,6 +281,18 @@ class Account:
 
     def get_run(self, i):
         return self.all_runs[i]
+
+    def get_all_goals(self):
+        return self.all_goals
+
+    def get_goal(self, i):
+        return self.all_goals[i]
+
+    def get_runs_completed(self):
+        return self.runs_completed
+
+    def get_goals_completed(self):
+        return self.goals_completed
 
     def get_phone_number(self):
         return self.phone_number
@@ -285,6 +327,43 @@ class Account:
     def get_total_calories_burned(self):
         return self.total_calories_burned
 
+    def get_total_time_running_sec(self):
+        return self.total_time_running_sec
+
+    def str_total_time_running_sec(self):
+        seconds = self.total_time_running_sec
+        to_return = ''
+        unit_dict = {
+            'years': 31536000,
+            'months': 2628003,
+            'weeks': 604800,
+            'days': 86400,
+            'hours': 3600,
+            'minutes': 60,
+            'seconds': 1
+        }
+        for unit in unit_dict:
+            if seconds >= unit_dict[unit]:
+                to_return += f'{seconds // unit_dict[unit]} {unit}'
+                seconds = seconds % unit_dict[unit]
+                if seconds != 0:
+                    to_return += ', '
+                else:
+                    break
+        return to_return
+
+    def get_distance_goals_completed(self):
+        return self.distance_goals_completed
+
+    def get_calorie_goals_completed(self):
+        return self.calorie_goals_completed
+
+    def get_time_goals_completed(self):
+        return self.time_goals_completed
+
+    def get_bmr(self):
+        return self.bmr
+
     def set_username(self, string):
         self.username = string
 
@@ -300,8 +379,20 @@ class Account:
     def insert_run(self, index, __Run):
         self.all_runs.insert(index, __Run)
 
-    def pop_run(self, index):
+    def pop_run(self, index=-1):
         self.all_runs.pop(index)
+
+    def set_all_goals(self, list_Goal):
+        self.all_goals = list(list_Goal)
+
+    def append_goal(self, __Goal):
+        self.all_goals.append(__Goal)
+
+    def insert_goal(self, index, __Goal):
+        self.all_goals.insert(index, __Goal)
+
+    def pop_goal(self, index=-1):
+        self.all_goals.pop(index)
 
     def set_first_name(self, first_name):
         self.first_name = first_name
@@ -312,19 +403,30 @@ class Account:
     def set_weight_kg(self, weight_kg):
         self.weight_kg = weight_kg
 
+    def __str__(self):
+        return (f'{type(self)} at {id(self)}: {self.get_username()}, {self.get_password()}, {self.get_first_name()}, '
+                f'{self.get_last_name()}, {self.get_weight_kg()}, {self.get_age()}, {self.get_all_runs()}, '
+                f'{self.get_height_cm()}, {self.get_isMale()}, {self.get_phone_number()}, {self.get_total_calories_burned()}, '
+                f'{self.get_total_dist_mi()}')
+
     def calculate_calories_burned(self, __Run: Run):
         # Functions obtained using lines of best fit in Desmos.
         # Change in functions is caused by a natural change in gait from walking to running.
         # #   calories burned in a run =
         # Run duration [minutes] * (MET value of run [determined by speed] * BMR * weight_kg) / 200
+        # under 4.5: MET = 1.50766**speed - 0.173639speed + 0.423387
         list_of_METs = []
-        list_of_mph = __Run.calculate_mph_between_samples()
+        list_of_mph = list(__Run.calculate_mph_between_samples())
         for speed in list_of_mph:
             if speed < 4.5:
-                list_of_METs.append(1.47022 ** speed + -0.173639 * speed + 0.423387)
+                list_of_METs.append((1.50766 ** speed) - (0.173639 * speed) + 0.423387)
             else:
                 list_of_METs.append(1.53223 * speed + 0.992667)
         calories_burned = 0
         for met in list_of_METs:
-            calories_burned += __Run.get_sample_interval() * (met * self.bmr * self.get_weight_kg()) / 200
+            calories_burned += __Run.get_sample_interval() * ((3.5 * met) * self.get_weight_kg() / 12000)
         return calories_burned
+
+
+if __name__ == "__main__":
+    pass
